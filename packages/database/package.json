@@ -1,0 +1,36 @@
+{
+  "name": "@elmry/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "generate": "prisma generate --schema prisma/schema.prisma",
+    "migrate": "prisma migrate deploy --schema prisma/schema.prisma",
+    "push": "prisma db push --schema prisma/schema.prisma",
+    "seed": "ts-node --transpile-only prisma/seed.ts",
+    "postinstall": "npm run generate",
+    "dev": "npm run generate",
+    "clean": "rimraf dist generated"
+  },
+  "dependencies": {
+    "@elmry/config": "*",
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.2.3",
+    "prisma": "^5.22.0",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

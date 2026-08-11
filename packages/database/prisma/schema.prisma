@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+}
+
+model Company {
+  id               Int               @id @default(autoincrement())
+  name             String            @unique
+  ownerName        String
+  ownerSurname     String
+  birthDate        DateTime
+  phone            String            @unique
+  extraPhone       String?
+  email            String?
+  imageUrl         String?           @db.LongText
+  branches         Branch[]
+  warehouses       Warehouse[]
+  tills            Till[]
+  categories       Category[]
+  products         Product[]
+  suppliers        Supplier[]
+  purchaseVouchers PurchaseVoucher[]
+  users            User[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Branch {
+  id         Int               @id @default(autoincrement())
+  name       String
+  companyId  Int
+  company    Company           @relation(fields: [companyId], references: [id])
+  warehouses BranchWarehouse[]
+  tills      BranchTill[]
+  users      BranchUser[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model Warehouse {
+  id        Int               @id @default(autoincrement())
+  name      String
+  companyId Int
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branches  BranchWarehouse[]
+  stocks    WarehouseStock[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model BranchWarehouse {
+  id          Int       @id @default(autoincrement())
+  branchId    Int
+  warehouseId Int
+  branch      Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([branchId, warehouseId])
+  @@index([warehouseId])
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  name          String?
+  password      String
+  companyId     Int
+  company       Company        @relation(fields: [companyId], references: [id])
+  branches      BranchUser[]
+  roleId        Int // 1=admin, 2=user
+  permissions   Permission[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+}
+
+model BranchUser {
+  id        Int      @id @default(autoincrement())
+  branchId  Int
+  userId    Int
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, userId])
+  @@index([userId])
+}
+
+model Permission {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id                Int        @id @default(autoincrement())
+  name              String
+  companyCategoryId Int?
+  companyId         Int?
+  company           Company?   @relation(fields: [companyId], references: [id])
+  parentId          Int?
+  parent            Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children          Category[] @relation("CategoryHierarchy")
+  parentProducts    Product[]  @relation("ParentCategoryProducts")
+  subProducts       Product[]  @relation("SubCategoryProducts")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([companyId, parentId, name])
+  @@unique([companyId, companyCategoryId])
+}
+
+model Product {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  barcode              String
+  stockQuantity        Float                 @default(0)
+  branchStockQuantity  Float                 @default(0)
+  companyStockQuantity Float                 @default(0)
+  stockUnit            String                @default("adet")
+  description          String?
+  salePrice            Float
+  purchasePrice        Float?
+  imageUrl             String?               @db.LongText
+  isActive             Boolean               @default(true)
+  companyId            Int
+  company              Company               @relation(fields: [companyId], references: [id])
+  warehouseStocks      WarehouseStock[]
+  parentCategoryId     Int
+  parentCategory       Category              @relation("ParentCategoryProducts", fields: [parentCategoryId], references: [id])
+  subCategoryId        Int?
+  subCategory          Category?             @relation("SubCategoryProducts", fields: [subCategoryId], references: [id])
+  purchaseVoucherLines PurchaseVoucherLine[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@unique([barcode, companyId])
+  @@index([companyId])
+  @@index([parentCategoryId])
+  @@index([subCategoryId])
+}
+
+model WarehouseStock {
+  id          Int       @id @default(autoincrement())
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity    Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([warehouseId, productId])
+  @@index([productId])
+}
+
+model Supplier {
+  id               Int               @id @default(autoincrement())
+  name             String
+  contactPerson    String?
+  phone            String?
+  email            String?
+  address          String?
+  taxNumber        String?
+  status           String            @default("active")
+  totalPurchase    Float             @default(0)
+  totalPayment     Float             @default(0)
+  totalMedaxil     Float             @default(0)
+  totalMexaric     Float             @default(0)
+  companyId        Int
+  company          Company           @relation(fields: [companyId], references: [id])
+  purchaseVouchers PurchaseVoucher[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([companyId])
+}
+
+model PurchaseVoucher {
+  id            Int                   @id @default(autoincrement())
+  serialNo      String
+  type          String
+  branchName    String
+  warehouseName String
+  supplierId    Int
+  supplier      Supplier              @relation(fields: [supplierId], references: [id])
+  companyId     Int
+  company       Company               @relation(fields: [companyId], references: [id])
+  voucherDate   DateTime
+  note          String?
+  status        String                @default("Taslak")
+  totalAmount   Float                 @default(0)
+  lines         PurchaseVoucherLine[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@unique([companyId, serialNo])
+  @@index([companyId, voucherDate])
+  @@index([supplierId])
+}
+
+model PurchaseVoucherLine {
+  id         Int             @id @default(autoincrement())
+  voucherId  Int
+  voucher    PurchaseVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product         @relation(fields: [productId], references: [id])
+  quantity   Float
+  unitPrice  Float
+  lineTotal  Float
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([voucherId])
+  @@index([productId])
+}
+
+model Till {
+  id           Int               @id @default(autoincrement())
+  name         String
+  companyId    Int
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balance      Float             @default(0)
+  status       String            @default("active")
+  branches     BranchTill[]
+  transactions TillTransaction[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model BranchTill {
+  id        Int      @id @default(autoincrement())
+  branchId  Int
+  tillId    Int
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  till      Till     @relation(fields: [tillId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, tillId])
+  @@index([tillId])
+}
+
+model TillTransaction {
+  id               Int      @id @default(autoincrement())
+  tillId           Int
+  till             Till     @relation(fields: [tillId], references: [id], onDelete: Cascade)
+  type             String // "medaxil" | "mexaric" | "gider"
+  amount           Float
+  description      String?
+  counterpartyType String? // "supplier" | "customer"
+  counterpartyId   Int?
+  counterpartyName String?
+  referenceNumber  String? // istinad nömrəsi / invoice number
+  category         String? // əməliyyat kateqoriyası
+  paymentMethod    String? // "cash" | "card" | "bank_transfer" | "check"
+  currency         String   @default("AZN")
+  carrierName      String?
+  orderNumber      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tillId])
+}

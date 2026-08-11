@@ -1,0 +1,32 @@
+.header {
+  width: calc(100% - var(--sidebar-width));
+  height: var(--header-height);
+  background: hsl(var(--card));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 24px;
+  border-bottom: 1px solid hsl(var(--border));
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  z-index: var(--z-header);
+  box-sizing: border-box;
+  backdrop-filter: blur(8px);
+}
+
+.title {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  color: hsl(var(--foreground));
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .header {
+    width: 100%;
+    left: 0;
+    padding: 0 12px;
+  }
+}

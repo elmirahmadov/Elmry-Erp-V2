@@ -1,0 +1,12 @@
+node_modules
+.turbo
+.git
+**/dist
+**/generated
+**/.env
+**/.env.local
+ERP-BackEnd
+ERP-FrontEnd
+*.md
+apps/web/node_modules
+apps/api/node_modules

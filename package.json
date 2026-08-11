@@ -1,0 +1,38 @@
+{
+  "name": "elmry-erp",
+  "private": true,
+  "packageManager": "npm@10.8.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "predev": "node scripts/ensure-docker-mysql.js && npm run build:packages",
+    "dev": "turbo run dev --filter=@elmry/api --filter=@elmry/web --filter=@elmry/admin",
+    "dev:api": "turbo run dev --filter=@elmry/api",
+    "dev:web": "turbo run dev --filter=@elmry/web",
+    "dev:admin": "turbo run dev --filter=@elmry/admin",
+    "build": "turbo run build",
+    "build:packages": "turbo run build --filter=@elmry/config --filter=@elmry/database",
+    "build:api": "turbo run build --filter=@elmry/api",
+    "build:web": "turbo run build --filter=@elmry/web",
+    "build:admin": "turbo run build --filter=@elmry/admin",
+    "start": "turbo run start --filter=@elmry/api --filter=@elmry/web --filter=@elmry/admin",
+    "db:generate": "node scripts/prisma-env.js generate --schema prisma/schema.prisma",
+    "db:migrate": "node scripts/prisma-env.js migrate deploy --schema prisma/schema.prisma",
+    "db:push": "node scripts/prisma-env.js db push --schema prisma/schema.prisma",
+    "db:seed": "npm run seed --workspace=@elmry/database",
+    "db:setup": "node scripts/ensure-docker-mysql.js && npm run db:generate && npm run db:push && npm run db:seed",
+    "docker:up": "docker compose up -d --build",
+    "docker:up:db": "node scripts/ensure-docker-mysql.js",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:ensure": "node scripts/ensure-docker-mysql.js",
+    "clean": "turbo run clean --force"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.3"
+  }
+}

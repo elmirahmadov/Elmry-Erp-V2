@@ -1,0 +1,15 @@
+node_modules
+.turbo
+dist
+generated
+.env
+.env.local
+*.log
+*.db
+.DS_Store
+apps/*/dist
+packages/*/dist
+packages/database/generated
+apps/web/dist
+coverage
+_archive/
