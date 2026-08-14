@@ -255,7 +255,7 @@ export class ProductService {
 
   async searchByCompany(
     companyId: number,
-    filters: { id?: number; name?: string; barcode?: string },
+    filters: { id?: number; name?: string; barcode?: string; q?: string },
   ): Promise<ProductServiceResult> {
     try {
       if (Number.isNaN(companyId)) {

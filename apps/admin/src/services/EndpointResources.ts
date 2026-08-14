@@ -17,4 +17,7 @@ export const ENDPOINTS = {
   TILLS: {
     BASE: "/api/tills",
   },
+  BANKS: {
+    BASE: "/api/banks",
+  },
 } as const;

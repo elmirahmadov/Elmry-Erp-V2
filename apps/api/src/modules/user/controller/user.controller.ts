@@ -36,13 +36,35 @@ export const findUserById = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, email, password, companyId, roleId } = req.body;
+  const {
+    name,
+    email,
+    password,
+    companyId,
+    roleId,
+    posBranchId,
+    posWarehouseId,
+    posTillId,
+    posBankId,
+  } = req.body;
   const result = await userService.update(parseInt(id), {
     name,
     email,
     password,
     companyId,
     roleId,
+    ...(posBranchId !== undefined
+      ? { posBranchId: posBranchId ? Number(posBranchId) : null }
+      : {}),
+    ...(posWarehouseId !== undefined
+      ? { posWarehouseId: posWarehouseId ? Number(posWarehouseId) : null }
+      : {}),
+    ...(posTillId !== undefined
+      ? { posTillId: posTillId ? Number(posTillId) : null }
+      : {}),
+    ...(posBankId !== undefined
+      ? { posBankId: posBankId ? Number(posBankId) : null }
+      : {}),
   });
   if (result.status === "SUCCESS") {
     res.json(result);

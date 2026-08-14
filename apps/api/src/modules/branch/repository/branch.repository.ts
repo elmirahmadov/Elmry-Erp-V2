@@ -62,6 +62,11 @@ export class BranchRepository {
             till: true,
           },
         },
+        banks: {
+          include: {
+            bank: true,
+          },
+        },
         users: {
           include: {
             user: {
@@ -153,6 +158,20 @@ export class BranchRepository {
           data: tillIds.map((tillId) => ({
             branchId,
             tillId,
+          })),
+        });
+      }
+    });
+  }
+
+  async setBranchBanks(branchId: number, bankIds: number[]) {
+    await prisma.$transaction(async (tx) => {
+      await tx.branchBank.deleteMany({ where: { branchId } });
+      if (bankIds.length > 0) {
+        await tx.branchBank.createMany({
+          data: bankIds.map((bankId) => ({
+            branchId,
+            bankId,
           })),
         });
       }

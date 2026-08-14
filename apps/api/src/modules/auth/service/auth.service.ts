@@ -15,6 +15,14 @@ export class AuthService {
     email: string;
     companyId: number;
     roleId: number;
+    posBranchId?: number | null;
+    posWarehouseId?: number | null;
+    posTillId?: number | null;
+    posBankId?: number | null;
+    posBranch?: { id: number; name: string } | null;
+    posWarehouse?: { id: number; name: string } | null;
+    posTill?: { id: number; name: string } | null;
+    posBank?: { id: number; name: string } | null;
   }) {
     const [company, branches] = await Promise.all([
       authRepo.findCompanyById(user.companyId),
@@ -24,7 +32,21 @@ export class AuthService {
     ]);
 
     return {
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        companyId: user.companyId,
+        roleId: user.roleId,
+        posBranchId: user.posBranchId ?? null,
+        posWarehouseId: user.posWarehouseId ?? null,
+        posTillId: user.posTillId ?? null,
+        posBankId: user.posBankId ?? null,
+        posBranchName: user.posBranch?.name ?? null,
+        posWarehouseName: user.posWarehouse?.name ?? null,
+        posTillName: user.posTill?.name ?? null,
+        posBankName: user.posBank?.name ?? null,
+      },
       companyName: company?.name ?? null,
       branches,
     };

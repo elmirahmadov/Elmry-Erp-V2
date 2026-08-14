@@ -221,8 +221,6 @@ export default function KassalarPage() {
         t.description,
         t.category,
         t.counterpartyName,
-        t.carrierName,
-        t.orderNumber,
         t.paymentMethod,
         t.type,
       ]
@@ -321,15 +319,15 @@ export default function KassalarPage() {
   };
 
   const handleTransactionSubmit = async (payload: {
-    type: "medaxil" | "mexaric" | "gider" | "transfer";
+    type: "medaxil" | "mexaric" | "gider" | "transfer" | "alis_iade" | "satis_iade";
     amount: number;
     description?: string;
     paymentMethod?: string;
     category?: string;
     currency?: string;
+    counterpartyType?: "supplier" | "customer";
+    counterpartyId?: number;
     counterpartyName?: string;
-    carrierName?: string;
-    orderNumber?: string;
     targetTillId?: number;
   }) => {
     if (!selectedTill || !companyId) return;
@@ -338,13 +336,11 @@ export default function KassalarPage() {
       if (!payload.targetTillId) {
         throw new Error("Hedef kasa seçiniz.");
       }
-      await transferBetweenTills({
+      await transferBetweenTills(selectedTill.id, {
         companyId,
-        fromTillId: selectedTill.id,
-        toTillId: payload.targetTillId,
+        targetTillId: payload.targetTillId,
         amount: payload.amount,
         description: payload.description,
-        currency: payload.currency,
       });
     } else {
       await createTillTransaction(selectedTill.id, {
@@ -355,9 +351,9 @@ export default function KassalarPage() {
         paymentMethod: payload.paymentMethod,
         category: payload.category,
         currency: payload.currency,
+        counterpartyType: payload.counterpartyType,
+        counterpartyId: payload.counterpartyId,
         counterpartyName: payload.counterpartyName,
-        carrierName: payload.carrierName,
-        orderNumber: payload.orderNumber,
       });
     }
 
@@ -372,8 +368,6 @@ export default function KassalarPage() {
     category?: string;
     paymentMethod?: string;
     currency?: string;
-    carrierName?: string;
-    orderNumber?: string;
   }) => {
     if (!selectedTx || !selectedTillId) return;
     const updated = await updateTillTransaction(
@@ -462,12 +456,14 @@ export default function KassalarPage() {
                 {[
                   "ID",
                   "Tip",
-                  "Tutar",
-                  "Açıklama",
-                  "Taraf",
-                  "Sipariş",
-                  "Tarih",
-                  "İşlem",
+                  "Metod",
+                  "Məbləğ",
+                  "Kateqoriya",
+                  "Açıqlama",
+                  "Kassa",
+                  "Hesab",
+                  "Tarix",
+                  "Əməliyyat",
                 ].map((h) => (
                   <th key={h} className={TH_CLASS}>
                     {h}
@@ -479,18 +475,24 @@ export default function KassalarPage() {
               {paginatedTransactions.map((t) => {
                 const tipLabel =
                   t.type === "medaxil"
-                    ? "Medaxil"
-                    : t.counterpartyType === "till"
-                      ? "Transfer"
-                      : t.type === "gider"
-                        ? "Gider"
-                        : "Mexaric";
+                    ? "Mədaxil"
+                    : t.type === "alis_iade"
+                      ? "Alış iadə"
+                      : t.type === "satis_iade"
+                        ? "Satış iadə"
+                        : t.counterpartyType === "till"
+                          ? "Transfer"
+                          : t.type === "gider"
+                            ? "Gider"
+                            : "Məxaric";
                 const tipClass =
-                  t.type === "medaxil"
+                  t.type === "medaxil" || t.type === "alis_iade"
                     ? "text-success"
                     : t.counterpartyType === "till"
                       ? "text-primary"
-                      : "text-destructive";
+                      : t.type === "satis_iade"
+                        ? "text-amber-500"
+                        : "text-destructive";
 
                 return (
                   <tr
@@ -500,22 +502,19 @@ export default function KassalarPage() {
                     <td className={TD_CLASS}>#{t.id}</td>
                     <td className={`${TD_CLASS} font-semibold ${tipClass}`}>
                       {tipLabel}
-                      {t.paymentMethod ? (
-                        <span className="ml-1 text-xs font-normal text-muted-foreground">
-                          ({t.paymentMethod})
-                        </span>
-                      ) : null}
                     </td>
+                    <td className={TD_CLASS}>{t.paymentMethod || "—"}</td>
                     <td className={`${TD_CLASS} font-semibold text-primary`}>
                       {formatCurrency(t.amount)} {t.currency || "AZN"}
                     </td>
-                    <td className={TD_CLASS}>
-                      {t.description || t.category || "—"}
+                    <td className={TD_CLASS}>{t.category || "—"}</td>
+                    <td className={`${TD_CLASS} max-w-[220px] truncate`} title={t.description || ""}>
+                      {t.description || "—"}
                     </td>
+                    <td className={TD_CLASS}>{selectedTill?.name || "—"}</td>
                     <td className={TD_CLASS}>
-                      {t.counterpartyName || t.carrierName || "—"}
+                      {t.counterpartyName || "—"}
                     </td>
-                    <td className={TD_CLASS}>{t.orderNumber || "—"}</td>
                     <td className={TD_CLASS}>{formatDate(t.createdAt)}</td>
                     <td className={TD_CLASS}>
                       <div className="flex items-center justify-center gap-1">
@@ -601,6 +600,7 @@ export default function KassalarPage() {
         initialData={selectedTx}
         tillBalance={selectedTill?.balance ?? 0}
         sourceTillId={selectedTill?.id ?? 0}
+        sourceTillName={selectedTill?.name}
         availableTills={transferTills}
         onClose={closeModal}
         onSubmit={handleTransactionSubmit}

@@ -127,6 +127,24 @@ export const setBranchTills = async (req: Request, res: Response) => {
   return res.status(400).json({ error: result.error });
 };
 
+export const setBranchBanks = async (req: Request, res: Response) => {
+  const { branchId } = req.params as { branchId: string };
+  const companyId = Number(req.body?.companyId);
+  const bankIds = Array.isArray(req.body?.bankIds) ? req.body.bankIds : [];
+
+  const result = await branchService.setBranchBanks(
+    Number(branchId),
+    companyId,
+    bankIds,
+  );
+
+  if (result.status === "SUCCESS") {
+    return res.json({ branch: result.branch });
+  }
+
+  return res.status(400).json({ error: result.error });
+};
+
 export const setBranchUsers = async (req: Request, res: Response) => {
   const { branchId } = req.params as { branchId: string };
   const companyId = Number(req.body?.companyId);

@@ -25,6 +25,14 @@ export interface AuthUser {
   email: string;
   companyId: number;
   roleId: number;
+  posBranchId?: number | null;
+  posWarehouseId?: number | null;
+  posTillId?: number | null;
+  posBankId?: number | null;
+  posBranchName?: string | null;
+  posWarehouseName?: string | null;
+  posTillName?: string | null;
+  posBankName?: string | null;
 }
 
 export interface AuthBootstrapData {

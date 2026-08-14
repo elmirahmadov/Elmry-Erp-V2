@@ -7,13 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "predev": "node scripts/ensure-docker-mysql.js && npm run build:packages",
+    "predev": "node scripts/ensure-docker-mysql.js && node scripts/build-packages.js",
     "dev": "turbo run dev --filter=@elmry/api --filter=@elmry/web --filter=@elmry/admin",
     "dev:api": "turbo run dev --filter=@elmry/api",
     "dev:web": "turbo run dev --filter=@elmry/web",
     "dev:admin": "turbo run dev --filter=@elmry/admin",
     "build": "turbo run build",
-    "build:packages": "turbo run build --filter=@elmry/config --filter=@elmry/database",
+    "build:packages": "node scripts/build-packages.js",
     "build:api": "turbo run build --filter=@elmry/api",
     "build:web": "turbo run build --filter=@elmry/web",
     "build:admin": "turbo run build --filter=@elmry/admin",

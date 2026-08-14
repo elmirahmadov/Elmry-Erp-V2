@@ -222,8 +222,6 @@ export default function MaliyyeHesabatPage() {
       Məbləğ: t.amount,
       Valyuta: t.currency || "AZN",
       Tərəfdaş: t.counterpartyName || "",
-      Daşıyıcı: t.carrierName || "",
-      "Sifariş ID": t.orderNumber || "",
       Tarix: t.createdAt.split("T")[0],
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -233,8 +231,10 @@ export default function MaliyyeHesabatPage() {
   };
 
   const getTypeBadge = (type: string) => {
-    if (type === "medaxil")
+    if (type === "medaxil" || type === "alis_iade")
       return "bg-success/15 text-success";
+    if (type === "satis_iade")
+      return "bg-amber-500/15 text-amber-500";
     if (type === "mexaric")
       return "bg-destructive/15 text-destructive";
     return "bg-primary/15 text-primary";
@@ -242,6 +242,8 @@ export default function MaliyyeHesabatPage() {
 
   const getTypeLabel = (type: string) => {
     if (type === "medaxil") return "Mədaxil";
+    if (type === "alis_iade") return "Alış iadə";
+    if (type === "satis_iade") return "Satış iadə";
     if (type === "mexaric") return "Məxaric";
     return "Gider";
   };

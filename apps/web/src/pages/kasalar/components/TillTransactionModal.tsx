@@ -1,13 +1,27 @@
-﻿import { FormEvent, useEffect, useState } from "react";
+﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import { type Till, type TillTransaction } from "../../../common/actions/tills.actions";
 import { type Supplier } from "../../suppliers/types/supplier.types";
 import { fetchSuppliers } from "../../../common/actions/suppliers.actions";
 import { useAuth } from "../../../common/contexts/AuthContext";
+import Select from "../../../common/components/select";
 import { FiEye, FiEdit2, FiDollarSign } from "react-icons/fi";
 
-type TransactionType = "medaxil" | "mexaric" | "gider" | "transfer";
+type TransactionType =
+  | "medaxil"
+  | "mexaric"
+  | "gider"
+  | "transfer"
+  | "alis_iade"
+  | "satis_iade";
 type CounterpartyType = "supplier" | "customer";
 type TransferTillOption = Till & { branchName?: string };
+
+const OUTFLOW_TYPES: TransactionType[] = [
+  "mexaric",
+  "gider",
+  "satis_iade",
+  "transfer",
+];
 
 interface TillTransactionModalProps {
   isOpen: boolean;
@@ -15,7 +29,20 @@ interface TillTransactionModalProps {
   initialData?: TillTransaction | null;
   tillBalance: number;
   sourceTillId: number;
+  sourceTillName?: string;
   availableTills: TransferTillOption[];
+  selectableSourceTill?: boolean;
+  onSourceTillChange?: (tillId: number) => void;
+  presetCounterparty?: {
+    id: number;
+    name: string;
+    type: CounterpartyType;
+  } | null;
+  counterpartyDebt?: number;
+  lockCounterparty?: boolean;
+  defaultType?: TransactionType;
+  defaultCategory?: string;
+  titleOverride?: string;
   onClose: () => void;
   onSubmit: (payload: {
     type: TransactionType;
@@ -29,8 +56,6 @@ interface TillTransactionModalProps {
     category?: string;
     paymentMethod?: string;
     currency?: string;
-    carrierName?: string;
-    orderNumber?: string;
   }) => Promise<void>;
   onEditSubmit?: (payload: {
     description?: string;
@@ -39,40 +64,8 @@ interface TillTransactionModalProps {
     category?: string;
     paymentMethod?: string;
     currency?: string;
-    carrierName?: string;
-    orderNumber?: string;
   }) => Promise<void>;
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 14px",
-  borderRadius: "8px",
-  border: "1.5px solid hsl(var(--border))",
-  fontSize: "14px",
-  color: "hsl(var(--foreground))",
-  background: "hsl(var(--input))",
-  outline: "none",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
-  transition: "border-color 0.2s",
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "13px",
-  fontWeight: "700",
-  color: "hsl(var(--muted-foreground))",
-  marginBottom: "6px",
-};
-
-const mockCarriers = [
-  "14",
-  "20",
-  "Logistra Logistics",
-  "Baku Cargo Express",
-  "Silk Way Carrier",
-];
 
 const mockCustomers = [
   "Müştəri #1",
@@ -82,13 +75,25 @@ const mockCustomers = [
   "Elçin Əliyev",
 ];
 
+const fieldClass =
+  "w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed";
+
 export default function TillTransactionModal({
   isOpen,
   mode = "create",
   initialData,
   tillBalance,
   sourceTillId,
+  sourceTillName,
   availableTills,
+  selectableSourceTill = false,
+  onSourceTillChange,
+  presetCounterparty = null,
+  counterpartyDebt,
+  lockCounterparty = false,
+  defaultType = "medaxil",
+  defaultCategory = "",
+  titleOverride,
   onClose,
   onSubmit,
   onEditSubmit,
@@ -100,6 +105,9 @@ export default function TillTransactionModal({
   const isEdit = mode === "edit";
   const isCreate = mode === "create";
 
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
   const [transactionType, setTransactionType] = useState<TransactionType>("medaxil");
   const [paymentMethod, setPaymentMethod] = useState("Bank");
   const [category, setCategory] = useState("");
@@ -107,9 +115,7 @@ export default function TillTransactionModal({
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("AZN");
   const [counterpartyName, setCounterpartyName] = useState("");
-  const [carrierName, setCarrierName] = useState("");
-  const [orderNumber, setOrderNumber] = useState("");
-  const [targetTillId, setTargetTillId] = useState<number | "">("");
+  const [targetTillId, setTargetTillId] = useState("");
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
@@ -118,17 +124,89 @@ export default function TillTransactionModal({
 
   const transferTargets = availableTills.filter((t) => t.id !== sourceTillId);
 
+  const typeOptions = useMemo(
+    () => [
+      { value: "medaxil", label: "Mədaxil (Gəlir)" },
+      { value: "mexaric", label: "Xərc (Ödəniş edilib)" },
+      { value: "alis_iade", label: "Məhsul alış iadə" },
+      { value: "satis_iade", label: "Məhsul satış iadə" },
+      { value: "transfer", label: "Kassa Transferi" },
+    ],
+    [],
+  );
+
+  const counterpartyLabel =
+    lockCounterparty && presetCounterparty?.type === "customer"
+      ? "Müştəri hesabı"
+      : transactionType === "alis_iade"
+        ? "Tədarükçü hesabı"
+        : transactionType === "satis_iade"
+          ? "Müştəri hesabı"
+          : "Hesab (müştəri / tədarükçü)";
+
+  const paymentOptions = useMemo(
+    () => [
+      { value: "Bank", label: "Bank" },
+      { value: "Nağd", label: "Nağd" },
+      { value: "Kart", label: "Kart" },
+      { value: "Digər", label: "Digər" },
+    ],
+    [],
+  );
+
+  const currencyOptions = useMemo(
+    () => [
+      { value: "AZN", label: "AZN" },
+      { value: "USD", label: "USD" },
+      { value: "EUR", label: "EUR" },
+    ],
+    [],
+  );
+
+  const targetTillOptions = useMemo(
+    () =>
+      transferTargets.map((t) => ({
+        value: String(t.id),
+        label: `${t.branchName ? `${t.branchName} / ` : ""}${t.name} (${t.balance.toFixed(2)} AZN)`,
+      })),
+    [transferTargets],
+  );
+
+  const counterpartyOptions = useMemo(
+    () => [
+      { value: "", label: "-- Seçilməyib --" },
+      ...mockCustomers.map((c) => ({ value: c, label: c })),
+      ...suppliers.map((s) => ({ value: s.name, label: `${s.name} (Tədarikçi)` })),
+    ],
+    [suppliers],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      let raf2: number;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setVisible(true));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
+    }
+    setVisible(false);
+    const timer = setTimeout(() => setMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) {
-      setTransactionType("medaxil");
+      setTransactionType(defaultType);
       setPaymentMethod("Bank");
-      setCategory("");
+      setCategory(defaultCategory);
       setDescription("");
       setAmount("");
       setCurrency("AZN");
       setCounterpartyName("");
-      setCarrierName("");
-      setOrderNumber("");
       setTargetTillId("");
       setError(null);
       return;
@@ -141,10 +219,26 @@ export default function TillTransactionModal({
       setAmount(String(initialData.amount));
       setCurrency(initialData.currency ?? "AZN");
       setCounterpartyName(initialData.counterpartyName ?? "");
-      setCarrierName(initialData.carrierName ?? "");
-      setOrderNumber(initialData.orderNumber ?? "");
+      return;
     }
-  }, [isOpen, isEdit, isView, initialData]);
+    if (isCreate) {
+      setTransactionType(defaultType);
+      setCategory(defaultCategory);
+      setPaymentMethod("Nağd");
+      if (presetCounterparty) {
+        setCounterpartyName(presetCounterparty.name);
+      }
+    }
+  }, [
+    isOpen,
+    isEdit,
+    isView,
+    isCreate,
+    initialData,
+    presetCounterparty,
+    defaultType,
+    defaultCategory,
+  ]);
 
   useEffect(() => {
     if (!isOpen || !companyId || !isCreate) return;
@@ -155,7 +249,59 @@ export default function TillTransactionModal({
       .finally(() => setLoadingSuppliers(false));
   }, [isOpen, companyId, isCreate]);
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    if (submitting) return;
+    onClose();
+  };
+
+  const title = titleOverride
+    ? titleOverride
+    : isView
+      ? "Əməliyyat Təfərrüatları"
+      : isEdit
+        ? "Əməliyyatı Düzənlə"
+        : "Yeni Maliyyə Əməliyyatı";
+
+  const sourceTillOptions = useMemo(
+    () =>
+      availableTills.map((t) => ({
+        value: String(t.id),
+        label: `${t.branchName ? `${t.branchName} / ` : ""}${t.name} (${t.balance.toFixed(2)} AZN)`,
+      })),
+    [availableTills],
+  );
+
+  const lockedCounterpartyOptions = useMemo(() => {
+    if (!presetCounterparty) return counterpartyOptions;
+    return [
+      {
+        value: presetCounterparty.name,
+        label: presetCounterparty.name,
+      },
+    ];
+  }, [presetCounterparty, counterpartyOptions]);
+
+  const parsedPayAmount = useMemo(() => {
+    const n = parseFloat(String(amount).replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [amount]);
+
+  const showDebtSummary =
+    lockCounterparty &&
+    presetCounterparty?.type === "customer" &&
+    typeof counterpartyDebt === "number";
+
+  const remainingDebt = showDebtSummary
+    ? Math.max(0, Number(counterpartyDebt) - parsedPayAmount)
+    : 0;
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+
+  if (!mounted) return null;
 
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -173,9 +319,9 @@ export default function TillTransactionModal({
     }
 
     if (
-      (transactionType === "mexaric" || transactionType === "transfer" || transactionType === "gider") &&
+      OUTFLOW_TYPES.includes(transactionType) &&
       parsedAmount > tillBalance &&
-      currency === "AZN" // simple check for base balance limits
+      currency === "AZN"
     ) {
       setError(`Kassa balansı yetərsizdir. Mövcud: ${tillBalance.toFixed(2)} AZN`);
       return;
@@ -184,22 +330,43 @@ export default function TillTransactionModal({
     setSubmitting(true);
     try {
       if (isCreate) {
-        // determine if counterpartyType is supplier or customer based on name matching mock or suppliers
-        let cType: CounterpartyType | undefined = undefined;
-        let cId: number | undefined = undefined;
+        let cType: CounterpartyType | undefined;
+        let cId: number | undefined;
 
         if (counterpartyName) {
-          const matchedSupplier = suppliers.find(s => s.name === counterpartyName);
-          if (matchedSupplier) {
-            cType = "supplier";
-            cId = matchedSupplier.id;
+          if (presetCounterparty && counterpartyName === presetCounterparty.name) {
+            cType = presetCounterparty.type;
+            cId = presetCounterparty.id;
           } else {
-            cType = "customer";
+            const matchedSupplier = suppliers.find((s) => s.name === counterpartyName);
+            if (matchedSupplier) {
+              cType = "supplier";
+              cId = matchedSupplier.id;
+            } else {
+              cType = "customer";
+            }
           }
         }
 
+        if (transactionType === "alis_iade") {
+          cType = "supplier";
+        } else if (transactionType === "satis_iade") {
+          cType = "customer";
+        }
+
+        const resolvedType: TransactionType =
+          transactionType === "transfer"
+            ? "transfer"
+            : transactionType === "medaxil"
+              ? "medaxil"
+              : transactionType === "alis_iade"
+                ? "alis_iade"
+                : transactionType === "satis_iade"
+                  ? "satis_iade"
+                  : "mexaric";
+
         await onSubmit({
-          type: transactionType === "transfer" ? "transfer" : (transactionType === "medaxil" ? "medaxil" : "mexaric"),
+          type: resolvedType,
           amount: parsedAmount,
           description: description.trim() || undefined,
           paymentMethod,
@@ -208,8 +375,6 @@ export default function TillTransactionModal({
           counterpartyType: cType,
           counterpartyId: cId,
           counterpartyName: counterpartyName || undefined,
-          carrierName: carrierName || undefined,
-          orderNumber: orderNumber.trim() || undefined,
           targetTillId: transactionType === "transfer" ? Number(targetTillId) : undefined,
         });
       } else if (isEdit && onEditSubmit) {
@@ -219,8 +384,6 @@ export default function TillTransactionModal({
           category: category.trim() || undefined,
           currency,
           counterpartyName: counterpartyName || undefined,
-          carrierName: carrierName || undefined,
-          orderNumber: orderNumber.trim() || undefined,
         });
       }
     } catch (err) {
@@ -231,135 +394,252 @@ export default function TillTransactionModal({
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(30, 41, 59, 0.4)", backdropFilter: "blur(3px)" }} onClick={onClose} />
-      <div style={{ position: "relative", width: "100%", maxWidth: "550px", margin: "0 16px", background: "hsl(var(--card))", borderRadius: "16px", boxShadow: "0 15px 45px rgba(0, 0, 0, 0.15)", overflow: "hidden", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-        
-        {/* Header */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid hsl(var(--border))", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: isView ? "rgba(39,194,55,0.15)" : isEdit ? "rgba(231,188,15,0.15)" : "rgba(231,188,15,0.1)", color: isView ? "#16a34a" : isEdit ? "#b8960c" : "#8a7009" }}>
+    <div className="fixed inset-0 z-[1200] flex justify-end" role="dialog" aria-modal="true">
+      <div
+        className="absolute inset-0 bg-black transition-opacity duration-300"
+        style={{ opacity: visible ? 0.45 : 0 }}
+        onClick={handleClose}
+      />
+
+      <div
+        className="relative h-full w-full max-w-lg bg-card shadow-2xl flex flex-col transition-all duration-300 ease-in-out border-l border-border"
+        style={{
+          borderTopLeftRadius: 12,
+          borderBottomLeftRadius: 12,
+          transform: visible ? "translateX(0)" : "translateX(100%)",
+          opacity: visible ? 1 : 0,
+        }}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              style={{
+                background: isView
+                  ? "rgba(39,194,55,0.15)"
+                  : "rgba(231,188,15,0.15)",
+                color: isView ? "#16a34a" : "#b8960c",
+              }}
+            >
               {isView ? <FiEye size={17} /> : isEdit ? <FiEdit2 size={17} /> : <FiDollarSign size={17} />}
             </div>
-            <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "hsl(var(--foreground))" }}>
-              {isView ? "Əməliyyat Təfərrüatları" : isEdit ? "Əməliyyatı Düzənlə" : "Yeni Maliyyə Əməliyyatı"}
-            </h2>
+            <h2 className="text-base font-semibold text-foreground truncate m-0">{title}</h2>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "hsl(var(--muted-foreground))", fontSize: "24px", cursor: "pointer", lineHeight: 1, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-2xl leading-none transition-colors"
+            onClick={handleClose}
+            aria-label="Bağla"
+            disabled={submitting}
+          >
+            ×
+          </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleFormSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px", overflowY: "auto", flex: 1 }}>
-          
-          {error && (
-            <div style={{ background: "rgba(246,78,52,0.12)", border: "1px solid rgba(246,78,52,0.35)", borderRadius: "8px", padding: "10px 14px", color: "var(--semantic-error)", fontSize: "13px" }}>
-              {error}
-            </div>
-          )}
+        <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-5 overflow-y-auto flex-1 flex flex-col gap-4">
+            {error && (
+              <div className="rounded-lg px-3.5 py-2.5 text-sm border border-[rgba(246,78,52,0.35)] bg-[rgba(246,78,52,0.12)] text-[var(--semantic-error)]">
+                {error}
+              </div>
+            )}
 
-          {/* Row 1: Tip & Ödəniş Metodu */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div>
-              <label style={labelStyle}>Tip</label>
-              <select disabled={isView} value={transactionType} onChange={(e) => setTransactionType(e.target.value as TransactionType)} style={inputStyle}>
-                <option value="medaxil">Mədaxil (Gəlir)</option>
-                <option value="mexaric">Xərc (Ödəniş edilib)</option>
-                <option value="transfer">Kassa Transferi</option>
-              </select>
+            <label className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-muted-foreground">Satış / kassa hesabı</span>
+              {selectableSourceTill && isCreate ? (
+                <Select
+                  value={String(sourceTillId || "")}
+                  options={sourceTillOptions}
+                  onChange={(v) => onSourceTillChange?.(Number(v))}
+                  placeholder="Kassa seçin"
+                  className={fieldClass}
+                />
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={sourceTillName || `Kassa #${sourceTillId}`}
+                  className={fieldClass}
+                />
+              )}
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">Tip</span>
+                <Select
+                  value={transactionType}
+                  options={typeOptions}
+                  onChange={(v) => setTransactionType(v as TransactionType)}
+                  disabled={isView || isEdit || lockCounterparty}
+                  placeholder="Tip seçin"
+                  className={fieldClass}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">Ödəniş metodu</span>
+                <Select
+                  value={paymentMethod}
+                  options={paymentOptions}
+                  onChange={setPaymentMethod}
+                  disabled={isView}
+                  placeholder="Metod seçin"
+                  className={fieldClass}
+                />
+              </label>
             </div>
-            <div>
-              <label style={labelStyle}>Ödəniş metodu</label>
-              <select disabled={isView} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputStyle}>
-                <option value="Bank">Bank</option>
-                <option value="Nağd">Nağd</option>
-                <option value="Kart">Kart</option>
-                <option value="Digər">Digər</option>
-              </select>
+
+            {transactionType === "transfer" && isCreate && (
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">Hədəf Kassa</span>
+                <Select
+                  value={targetTillId}
+                  options={targetTillOptions}
+                  onChange={setTargetTillId}
+                  placeholder="-- Hədəf kassa seçin --"
+                  className={fieldClass}
+                />
+              </label>
+            )}
+
+            <label className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-muted-foreground">Kateqoriya</span>
+              <input
+                type="text"
+                disabled={isView}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Nəqliyyat, İcarə, s.m."
+                className={fieldClass}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-sm font-medium text-muted-foreground">Ad / Açıqlama</span>
+              <input
+                type="text"
+                disabled={isView}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Əməliyyatın təsviri"
+                className={fieldClass}
+              />
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">Məbləğ</span>
+                <input
+                  type="text"
+                  disabled={isView}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={fieldClass}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">Valyuta</span>
+                <Select
+                  value={currency}
+                  options={currencyOptions}
+                  onChange={setCurrency}
+                  disabled={isView}
+                  placeholder="Valyuta"
+                  className={fieldClass}
+                />
+              </label>
             </div>
+
+            {showDebtSummary ? (
+              <div className="rounded-lg border border-border bg-secondary/50 px-3.5 py-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">Cari borc</span>
+                  <span className="font-semibold text-destructive">
+                    {formatMoney(Number(counterpartyDebt))} {currency}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">Ödəniləcək</span>
+                  <span className="font-semibold text-foreground">
+                    {formatMoney(parsedPayAmount)} {currency}
+                  </span>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">Ödənişdən sonra qalan</span>
+                  <span
+                    className={`font-bold ${
+                      remainingDebt > 0 ? "text-amber-500" : "text-success"
+                    }`}
+                  >
+                    {formatMoney(remainingDebt)} {currency}
+                  </span>
+                </div>
+                {parsedPayAmount > Number(counterpartyDebt) + 0.001 ? (
+                  <p className="text-xs text-amber-500 m-0">
+                    Ödəniş cari borcdan çoxdur (artıq {formatMoney(parsedPayAmount - Number(counterpartyDebt))} {currency}).
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {transactionType !== "transfer" && (
+              <label className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {counterpartyLabel}
+                  {loadingSuppliers ? "…" : ""}
+                </span>
+                <Select
+                  value={counterpartyName}
+                  options={
+                    lockCounterparty
+                      ? lockedCounterpartyOptions
+                      : transactionType === "alis_iade"
+                      ? [
+                          { value: "", label: "-- Seçilməyib --" },
+                          ...suppliers.map((s) => ({
+                            value: s.name,
+                            label: s.name,
+                          })),
+                        ]
+                      : transactionType === "satis_iade"
+                        ? [
+                            { value: "", label: "-- Seçilməyib --" },
+                            ...mockCustomers.map((c) => ({ value: c, label: c })),
+                          ]
+                        : counterpartyOptions
+                  }
+                  onChange={setCounterpartyName}
+                  disabled={isView || lockCounterparty}
+                  placeholder="-- Seçilməyib --"
+                  className={fieldClass}
+                />
+              </label>
+            )}
           </div>
 
-          {/* Target Till for transfer */}
-          {transactionType === "transfer" && isCreate && (
-            <div>
-              <label style={labelStyle}>Hədəf Kassa</label>
-              <select value={targetTillId} onChange={(e) => setTargetTillId(e.target.value ? Number(e.target.value) : "")} style={inputStyle}>
-                <option value="">-- Hədəf kassa seçin --</option>
-                {transferTargets.map((t) => (
-                  <option key={t.id} value={t.id}>{t.branchName ? `${t.branchName} / ` : ""}{t.name} ({t.balance.toFixed(2)} AZN)</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Row 2: Kateqoriya */}
-          <div>
-            <label style={labelStyle}>Kateqoriya (Məs: Nəqliyyat, Əməkhaqqı, Avans)</label>
-            <input type="text" disabled={isView} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Nəqliyyat, İcarə, s.m." style={inputStyle} />
-          </div>
-
-          {/* Row 3: Ad / Açıqlama */}
-          <div>
-            <label style={labelStyle}>Ad / Açıqlama</label>
-            <input type="text" disabled={isView} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Əməliyyatın təsviri" style={inputStyle} />
-          </div>
-
-          {/* Row 4: Məbləğ & Valyuta */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
-            <div>
-              <label style={labelStyle}>Məbləğ</label>
-              <input type="text" disabled={isView} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Valyuta</label>
-              <select disabled={isView} value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle}>
-                <option value="AZN">AZN</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Row 5: Müştəri ilə əlaqələndir */}
-          {transactionType !== "transfer" && (
-            <div>
-              <label style={labelStyle}>Müştəri ilə əlaqələndir</label>
-              <select disabled={isView} value={counterpartyName} onChange={(e) => setCounterpartyName(e.target.value)} style={inputStyle}>
-                <option value="">-- Seçilməyib --</option>
-                {mockCustomers.map(c => <option key={c} value={c}>{c}</option>)}
-                {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} (Tədarikçi)</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Row 6: Daşıyıcı ilə əlaqələndir */}
-          {transactionType !== "transfer" && (
-            <div>
-              <label style={labelStyle}>Daşıyıcı ilə əlaqələndir</label>
-              <select disabled={isView} value={carrierName} onChange={(e) => setCarrierName(e.target.value)} style={inputStyle}>
-                <option value="">-- Seçilməyib --</option>
-                {mockCarriers.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Row 7: Sifariş nömrəsi (İstəyə bağlı) */}
-          <div>
-            <label style={labelStyle}>Sifariş nömrəsi (İstəyə bağlı)</label>
-            <input type="text" disabled={isView} value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="Sifariş ID və ya nömrəsi" style={inputStyle} />
-          </div>
-
-          {/* Footer Buttons */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px" }}>
-            <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: "8px", border: "1.5px solid #dcdfe6", background: "hsl(var(--card))", color: "#60748b", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-border shrink-0 bg-secondary/40">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={submitting}
+              className="px-4 py-2.5 rounded-lg border border-border bg-card text-muted-foreground text-sm font-semibold hover:text-foreground transition-colors disabled:opacity-60"
+            >
               {isView ? "Bağla" : "İmtina"}
             </button>
             {!isView && (
-              <button type="submit" disabled={submitting} style={{ padding: "10px 22px", borderRadius: "8px", border: "none", background: "#e7bc0f", color: "#ffffff", fontSize: "14px", fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 10px rgba(59, 130, 246, 0.2)", opacity: submitting ? 0.7 : 1 }}>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2.5 rounded-lg border-none bg-[#e7bc0f] text-white text-sm font-semibold hover:brightness-95 transition disabled:opacity-70"
+              >
                 {submitting ? "Saxlanılır..." : "Saxla"}
               </button>
             )}
           </div>
-
         </form>
       </div>
     </div>

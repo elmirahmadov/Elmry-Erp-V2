@@ -21,6 +21,14 @@ export const ENDPOINTS = {
     PURCHASE_BY_ID: (id: number) => `/api/suppliers/${id}/purchase`,
     PAYMENT_BY_ID: (id: number) => `/api/suppliers/${id}/payment`,
   },
+  CUSTOMERS: {
+    BASE: "/api/customers",
+    BY_ID: (id: number) => `/api/customers/${id}`,
+    DEBT_BY_ID: (id: number) => `/api/customers/${id}/debt`,
+    SALE_BY_ID: (id: number) => `/api/customers/${id}/sale`,
+    PAYMENT_BY_ID: (id: number) => `/api/customers/${id}/payment`,
+    PAYMENT_TOTALS_BY_ID: (id: number) => `/api/customers/${id}/payment-totals`,
+  },
   PURCHASES: {
     BASE: "/api/purchases",
     MODAL_DATA: "/api/purchases/modal-data",
@@ -35,6 +43,13 @@ export const ENDPOINTS = {
     TRANSACTIONS: (tillId: number) => `/api/tills/${tillId}/transactions`,
     TRANSFER: (tillId: number) => `/api/tills/${tillId}/transfer`,
   },
+  BANKS: {
+    BASE: "/api/banks",
+    BY_BRANCH: (branchId: number) => `/api/banks?branchId=${branchId}`,
+    OVERVIEW: "/api/banks/overview",
+    TRANSACTIONS: (bankId: number) => `/api/banks/${bankId}/transactions`,
+    TRANSFER: (bankId: number) => `/api/banks/${bankId}/transfer`,
+  },
   BRANCHES: {
     CREATE: "/api/branches/create",
     BY_COMPANY: (companyId: number) => `/api/branches/company/${companyId}`,
@@ -43,6 +58,7 @@ export const ENDPOINTS = {
     WAREHOUSES_BY_BRANCH: (branchId: number) =>
       `/api/branches/${branchId}/warehouses`,
     TILLS_BY_BRANCH: (branchId: number) => `/api/branches/${branchId}/tills`,
+    BANKS_BY_BRANCH: (branchId: number) => `/api/branches/${branchId}/banks`,
     USERS_BY_BRANCH: (branchId: number) => `/api/branches/${branchId}/users`,
   },
   USERS: {

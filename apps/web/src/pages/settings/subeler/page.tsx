@@ -6,6 +6,7 @@ import {
   fetchBranches,
   fetchWarehousesByCompany,
   setBranchTills,
+  setBranchBanks,
   setBranchUsers,
   setBranchWarehouses,
   type Branch,
@@ -13,6 +14,7 @@ import {
   type Warehouse,
 } from "../../../common/actions/branch.actions";
 import { fetchTills, type Till } from "../../../common/actions/tills.actions";
+import { fetchBanks, type Bank } from "../../../common/actions/banks.actions";
 import {
   fetchUsersByCompany,
   type CompanyUser,
@@ -27,10 +29,12 @@ export default function SubelerPage() {
   const [detail, setDetail] = useState<BranchDetail | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [tills, setTills] = useState<Till[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [users, setUsers] = useState<CompanyUser[]>([]);
 
   const [warehouseIds, setWarehouseIds] = useState<number[]>([]);
   const [tillIds, setTillIds] = useState<number[]>([]);
+  const [bankIds, setBankIds] = useState<number[]>([]);
   const [userIds, setUserIds] = useState<number[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -42,17 +46,18 @@ export default function SubelerPage() {
     setLoading(true);
     setError(null);
     try {
-      const [branchList, warehouseList, tillList, userList] = await Promise.all(
-        [
+      const [branchList, warehouseList, tillList, bankList, userList] =
+        await Promise.all([
           fetchBranches(cid),
           fetchWarehousesByCompany(cid),
           fetchTills(cid),
+          fetchBanks(cid),
           fetchUsersByCompany(cid),
-        ],
-      );
+        ]);
       setBranches(branchList);
       setWarehouses(warehouseList);
       setTills(tillList);
+      setBanks(bankList);
       setUsers(userList);
       setSelectedBranchId((prev) => prev ?? branchList[0]?.id ?? null);
     } catch (e) {
@@ -70,6 +75,7 @@ export default function SubelerPage() {
       setDetail(branchDetail);
       setWarehouseIds(branchDetail.warehouseIds || []);
       setTillIds(branchDetail.tillIds || []);
+      setBankIds(branchDetail.bankIds || []);
       setUserIds(branchDetail.userIds || []);
     } catch (e) {
       setError((e as Error).message);
@@ -107,6 +113,7 @@ export default function SubelerPage() {
     try {
       await setBranchWarehouses(selectedBranchId, companyId, warehouseIds);
       await setBranchTills(selectedBranchId, companyId, tillIds);
+      await setBranchBanks(selectedBranchId, companyId, bankIds);
       const updated = await setBranchUsers(
         selectedBranchId,
         companyId,
@@ -115,6 +122,7 @@ export default function SubelerPage() {
       setDetail(updated);
       setWarehouseIds(updated.warehouseIds || []);
       setTillIds(updated.tillIds || []);
+      setBankIds(updated.bankIds || []);
       setUserIds(updated.userIds || []);
       setSuccess("Sube atamalari kaydedildi.");
     } catch (e) {
@@ -132,8 +140,8 @@ export default function SubelerPage() {
       <div className="shrink-0 border-b border-border bg-card px-4 py-3">
         <h1 className="text-base font-semibold text-foreground">Subeler</h1>
         <p className="text-xs text-muted-foreground">
-          Secilen subede hangi kasa, anbar ve kullanicilarin gorunecegini
-          ayarlayin. Sirket / sube / anbar / kassa acmak icin Admin Panel
+          Secilen subede hangi kasa, bank, anbar ve kullanicilarin gorunecegini
+          ayarlayin. Sirket / sube / anbar / kassa / bank acmak icin Admin Panel
           kullanin.
         </p>
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
@@ -212,6 +220,25 @@ export default function SubelerPage() {
                         onChange={() => toggleId(tillIds, setTillIds, till.id)}
                       />
                       {till.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h2 className="mb-2 text-sm font-semibold">Banklar</h2>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {banks.map((bank) => (
+                    <label
+                      key={bank.id}
+                      className="flex items-center gap-2 border border-border px-3 py-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={bankIds.includes(bank.id)}
+                        onChange={() => toggleId(bankIds, setBankIds, bank.id)}
+                      />
+                      {bank.name}
                     </label>
                   ))}
                 </div>

@@ -36,6 +36,13 @@ export interface BranchDetail extends Branch {
     balance: number;
     status: string;
   }>;
+  banks: Array<{
+    id: number;
+    name: string;
+    companyId: number;
+    balance: number;
+    status: string;
+  }>;
   users: Array<{
     id: number;
     name: string | null;
@@ -45,6 +52,7 @@ export interface BranchDetail extends Branch {
   }>;
   warehouseIds: number[];
   tillIds: number[];
+  bankIds: number[];
   userIds: number[];
 }
 
@@ -180,6 +188,26 @@ export async function setBranchTills(
   const data = await handleApiResponse<{ branch: BranchDetail }>(
     response,
     "Sube kasalari guncellenemedi",
+  );
+  return data.branch;
+}
+
+export async function setBranchBanks(
+  branchId: number,
+  companyId: number,
+  bankIds: number[],
+): Promise<BranchDetail> {
+  const response = await fetchNoCache(
+    buildApiUrl(ENDPOINTS.BRANCHES.BANKS_BY_BRANCH(branchId)),
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyId, bankIds }),
+    },
+  );
+  const data = await handleApiResponse<{ branch: BranchDetail }>(
+    response,
+    "Sube banklari guncellenemedi",
   );
   return data.branch;
 }

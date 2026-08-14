@@ -12,10 +12,12 @@ const headerTitles: Record<string, string> = {
   "/purchase": "Ürün Alış",
   "/purchase/iade": "Ürün İade",
   "/suppliers": "Tedarikçiler",
+  "/customers": "Müştərilər",
   "/companies": "Şirketler",
   "/settings/kassa-ekle": "Kassa Ekle",
   "/settings/anbar-ekle": "Anbar Ekle",
   "/kasalar": "Kassalar",
+  "/banklar": "Banklar",
   "/maliyye/hesabat": "Maliyyə Hesabatı",
   "/maliyye/gider-analizi": "Xərc Analizi",
   "/maliyye/menfeet-zererler": "Mənfəət & Zərər",
@@ -25,7 +27,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const pathname = location.pathname;
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/pos" || pathname.startsWith("/pos/")) {
     return <>{children}</>;
   }
 

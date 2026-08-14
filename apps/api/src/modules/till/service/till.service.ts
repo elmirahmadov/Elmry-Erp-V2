@@ -249,7 +249,15 @@ export class TillService {
       if (!amount || amount <= 0) {
         return { status: "ERROR", error: "Tutar 0'dan buyuk olmalidir" };
       }
-      if (!["medaxil", "mexaric", "gider"].includes(data.type)) {
+      const inflowTypes = ["medaxil", "alis_iade"];
+      const allowedTypes = [
+        "medaxil",
+        "mexaric",
+        "gider",
+        "alis_iade",
+        "satis_iade",
+      ];
+      if (!allowedTypes.includes(data.type)) {
         return { status: "ERROR", error: "Gecersiz islem turu" };
       }
 
@@ -262,9 +270,10 @@ export class TillService {
         return { status: "ERROR", error: "Kassa bulunamadi" };
       }
 
-      const balanceDelta = data.type === "medaxil" ? amount : -amount;
+      const isInflow = inflowTypes.includes(data.type);
+      const balanceDelta = isInflow ? amount : -amount;
 
-      if (data.type !== "medaxil" && existingTill.balance + balanceDelta < 0) {
+      if (!isInflow && existingTill.balance + balanceDelta < 0) {
         return { status: "ERROR", error: "Kassa bakiyesi yetersiz" };
       }
 
@@ -298,10 +307,10 @@ export class TillService {
         );
 
         if (supplier) {
-          if (data.type === "medaxil") {
+          if (data.type === "medaxil" || data.type === "alis_iade") {
             await supplierRepository.addMedaxil(supplierId, companyId, amount);
           }
-          if (data.type === "mexaric") {
+          if (data.type === "mexaric" || data.type === "satis_iade") {
             await supplierRepository.addMexaric(supplierId, companyId, amount);
           }
         }
@@ -444,8 +453,9 @@ export class TillService {
         return { status: "ERROR", error: "Islem bulunamadi" };
       }
 
-      const balanceDelta =
-        existing.type === "medaxil" ? -existing.amount : existing.amount;
+      const wasInflow =
+        existing.type === "medaxil" || existing.type === "alis_iade";
+      const balanceDelta = wasInflow ? -existing.amount : existing.amount;
 
       await tillRepository.updateBalance(tillId, balanceDelta);
       await tillRepository.deleteTransaction(txId, tillId);

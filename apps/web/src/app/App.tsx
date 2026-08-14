@@ -9,12 +9,15 @@ import PurchasePage from "../pages/purchase/page";
 import KullanicilarPage from "../pages/settings/kullanicilar/page";
 import SubelerPage from "../pages/settings/subeler/page";
 import KassalarPage from "../pages/kasalar/page";
+import BanklarPage from "../pages/banklar/page";
 import MaliyyeHesabatPage from "../pages/maliyye/hesabat/page";
 import GiderAnaliziPage from "../pages/maliyye/gider-analizi/page";
 import MenfeetZererlerPage from "../pages/maliyye/menfeet-zererler/page";
+import PosPage from "../pages/pos/page";
 import AppShell from "../common/components/layout/appShell/AppShell";
 import RequireAuth from "../common/components/auth/RequireAuth";
 import SuppliersPage from "../pages/suppliers/page";
+import CustomersPage from "../pages/customers/page";
 
 function App() {
   return (
@@ -23,6 +26,14 @@ function App() {
         <AppShell>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/pos"
+              element={
+                <RequireAuth>
+                  <PosPage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -52,6 +63,14 @@ function App() {
               element={
                 <RequireAuth>
                   <SuppliersPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <RequireAuth>
+                  <CustomersPage />
                 </RequireAuth>
               }
             />
@@ -92,6 +111,14 @@ function App() {
               element={
                 <RequireAuth>
                   <KassalarPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/banklar"
+              element={
+                <RequireAuth>
+                  <BanklarPage />
                 </RequireAuth>
               }
             />

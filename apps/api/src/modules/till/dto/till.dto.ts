@@ -26,7 +26,7 @@ export interface TillOverviewDto {
 export interface TillTransactionCreateDto {
   tillId: number;
   companyId: number;
-  type: "medaxil" | "mexaric" | "gider";
+  type: "medaxil" | "mexaric" | "gider" | "alis_iade" | "satis_iade";
   amount: number;
   description?: string;
   counterpartyType?: "supplier" | "customer";

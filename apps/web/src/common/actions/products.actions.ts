@@ -19,6 +19,11 @@ export interface ProductRecord {
     branchName: string;
     quantity: number;
   }>;
+  warehouseStocks?: Array<{
+    warehouseId: number;
+    warehouseName: string;
+    quantity: number;
+  }>;
   stockUnit: string;
   description?: string | null;
   salePrice: number;
@@ -42,24 +47,28 @@ export async function fetchProducts(companyId: number) {
 
 export async function searchProducts(
   companyId: number,
-  filters: { id?: number; name?: string; barcode?: string },
+  filters: { id?: number; name?: string; barcode?: string; q?: string },
 ) {
-  const params = new URLSearchParams({ companyId: String(companyId) });
+  const params: Record<string, string | number> = { companyId };
 
   if (filters.id !== undefined) {
-    params.set("id", String(filters.id));
+    params.id = filters.id;
   }
 
   if (filters.name?.trim()) {
-    params.set("name", filters.name.trim());
+    params.name = filters.name.trim();
   }
 
   if (filters.barcode?.trim()) {
-    params.set("barcode", filters.barcode.trim());
+    params.barcode = filters.barcode.trim();
+  }
+
+  if (filters.q?.trim()) {
+    params.q = filters.q.trim();
   }
 
   const response = await fetchNoCache(
-    buildApiUrl(ENDPOINTS.PRODUCTS.SEARCH, Object.fromEntries(params)),
+    buildApiUrl(ENDPOINTS.PRODUCTS.SEARCH, params),
   );
   const data = await handleApiResponse<{ products?: ProductRecord[] }>(
     response,

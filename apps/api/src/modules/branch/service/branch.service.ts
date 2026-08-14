@@ -2,11 +2,13 @@ import { BranchRepository } from "../repository/branch.repository";
 import { BranchCreateDto, WarehouseCreateDto } from "../dto/branch.dto";
 import { CompanyRepository } from "../../company/repository/company.repository";
 import { TillRepository } from "../../till/repository/till.repository";
+import { BankRepository } from "../../bank/repository/bank.repository";
 import { UserRepository } from "../../user/repository/user.repository";
 
 const branchRepository = new BranchRepository();
 const companyRepository = new CompanyRepository();
 const tillRepository = new TillRepository();
+const bankRepository = new BankRepository();
 const userRepository = new UserRepository();
 
 export class BranchService {
@@ -89,9 +91,11 @@ export class BranchService {
           companyId: branch.companyId,
           warehouses: branch.warehouses.map((item) => item.warehouse),
           tills: branch.tills.map((item) => item.till),
+          banks: branch.banks.map((item) => item.bank),
           users: branch.users.map((item) => item.user),
           warehouseIds: branch.warehouses.map((item) => item.warehouseId),
           tillIds: branch.tills.map((item) => item.tillId),
+          bankIds: branch.banks.map((item) => item.bankId),
           userIds: branch.users.map((item) => item.userId),
         },
       };
@@ -237,6 +241,35 @@ export class BranchService {
       }
 
       await branchRepository.setBranchTills(branchId, uniqueIds);
+      return this.findDetail(branchId, companyId);
+    } catch (error) {
+      return { status: "ERROR", error: (error as Error).message };
+    }
+  }
+
+  async setBranchBanks(
+    branchId: number,
+    companyId: number,
+    bankIds: number[],
+  ) {
+    try {
+      const branch = await branchRepository.findByIdAndCompany(
+        branchId,
+        companyId,
+      );
+      if (!branch) {
+        return { status: "ERROR", error: "Filial bulunamadi" };
+      }
+
+      const uniqueIds = [...new Set(bankIds.map(Number).filter((id) => id > 0))];
+      for (const bankId of uniqueIds) {
+        const bank = await bankRepository.findByIdAndCompany(bankId, companyId);
+        if (!bank) {
+          return { status: "ERROR", error: `Bank hesabi bulunamadi: ${bankId}` };
+        }
+      }
+
+      await branchRepository.setBranchBanks(branchId, uniqueIds);
       return this.findDetail(branchId, companyId);
     } catch (error) {
       return { status: "ERROR", error: (error as Error).message };

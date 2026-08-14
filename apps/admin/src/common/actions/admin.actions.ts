@@ -37,6 +37,17 @@ export interface Till {
   branches?: Array<{ branch: { id: number; name: string } }>;
 }
 
+export interface Bank {
+  id: number;
+  name: string;
+  companyId: number;
+  accountNumber?: string | null;
+  iban?: string | null;
+  balance: number;
+  status: string;
+  branches?: Array<{ branch: { id: number; name: string } }>;
+}
+
 export type CompanyPayload = {
   name: string;
   ownerName: string;
@@ -173,4 +184,28 @@ export async function createTill(name: string, companyId: number) {
     "Kassa olusturulamadi",
   );
   return data.till;
+}
+
+export async function fetchBanks(companyId: number) {
+  const response = await fetchNoCache(
+    buildApiUrl(ENDPOINTS.BANKS.BASE, { companyId }),
+  );
+  const data = await handleApiResponse<{ banks?: Bank[] }>(
+    response,
+    "Banklar getirilemedi",
+  );
+  return data.banks || [];
+}
+
+export async function createBank(name: string, companyId: number) {
+  const response = await fetchNoCache(buildApiUrl(ENDPOINTS.BANKS.BASE), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, companyId }),
+  });
+  const data = await handleApiResponse<{ bank: Bank }>(
+    response,
+    "Bank olusturulamadi",
+  );
+  return data.bank;
 }

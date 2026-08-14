@@ -44,6 +44,10 @@ export class UserService {
         password: hashedPassword,
         companyId: data.companyId,
         roleId: data.roleId,
+        posBranchId: data.posBranchId ?? null,
+        posWarehouseId: data.posWarehouseId ?? null,
+        posTillId: data.posTillId ?? null,
+        posBankId: data.posBankId ?? null,
       });
 
       if (data.permissionNames && data.permissionNames.length > 0) {

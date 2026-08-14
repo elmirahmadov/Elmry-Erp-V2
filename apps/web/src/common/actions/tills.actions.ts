@@ -21,7 +21,7 @@ export interface Till {
 export interface TillTransaction {
   id: number;
   tillId: number;
-  type: "medaxil" | "mexaric" | "gider";
+  type: "medaxil" | "mexaric" | "gider" | "alis_iade" | "satis_iade";
   amount: number;
   description?: string;
   counterpartyType?: "supplier" | "customer" | "till";
@@ -232,7 +232,7 @@ export async function createTillTransaction(
   tillId: number,
   payload: {
     companyId: number;
-    type: "medaxil" | "mexaric" | "gider";
+    type: "medaxil" | "mexaric" | "gider" | "alis_iade" | "satis_iade";
     amount: number;
     description?: string;
     counterpartyType?: "supplier" | "customer" | "till";

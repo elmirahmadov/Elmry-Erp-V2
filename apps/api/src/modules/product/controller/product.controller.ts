@@ -40,11 +40,12 @@ export const findAllProducts = async (req: Request, res: Response) => {
 };
 
 export const searchProducts = async (req: Request, res: Response) => {
-  const { companyId, id, name, barcode } = req.query as {
+  const { companyId, id, name, barcode, q } = req.query as {
     companyId?: string;
     id?: string;
     name?: string;
     barcode?: string;
+    q?: string;
   };
 
   const parsedCompanyId = parseInt(companyId || "");
@@ -60,11 +61,13 @@ export const searchProducts = async (req: Request, res: Response) => {
 
   const normalizedName = name?.trim();
   const normalizedBarcode = barcode?.trim();
+  const normalizedQ = q?.trim();
 
   const result = await productService.searchByCompany(parsedCompanyId, {
     id: parsedId,
     name: normalizedName || undefined,
     barcode: normalizedBarcode || undefined,
+    q: normalizedQ || undefined,
   });
 
   if (result.status === ProductStatus.SUCCESS) {

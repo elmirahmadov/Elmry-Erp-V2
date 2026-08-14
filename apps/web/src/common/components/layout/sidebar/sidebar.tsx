@@ -7,6 +7,7 @@ import {
   FaAngleDown,
   FaCog,
   FaCashRegister,
+  FaUniversity,
   FaMoneyBillWave,
   FaChartBar,
   FaChartPie,
@@ -14,6 +15,7 @@ import {
   FaClipboardList,
   FaUsers,
   FaStore,
+  FaShoppingCart,
 } from "react-icons/fa";
 import { useEffect, useState, type ReactNode } from "react";
 import styles from "./sidebar.module.css";
@@ -61,7 +63,8 @@ export default function Sidebar() {
       location.pathname.startsWith("/purchase"),
   );
   const [maliyyeOpen, setMaliyyeOpen] = useState(
-    location.pathname.startsWith("/kasalar"),
+    location.pathname.startsWith("/kasalar") ||
+      location.pathname.startsWith("/banklar"),
   );
   const [hesabatOpen, setHesabatOpen] = useState(isReportPath(location.pathname));
   const [settingsOpen, setSettingsOpen] = useState(
@@ -79,7 +82,10 @@ export default function Sidebar() {
     ) {
       setProductsOpen(true);
     }
-    if (location.pathname.startsWith("/kasalar")) {
+    if (
+      location.pathname.startsWith("/kasalar") ||
+      location.pathname.startsWith("/banklar")
+    ) {
       setMaliyyeOpen(true);
     }
     if (isReportPath(location.pathname)) {
@@ -115,6 +121,20 @@ export default function Sidebar() {
               <FaChartLine />
             </span>
             Dashboard
+          </Link>
+        </div>
+
+        <div className={styles.navItem}>
+          <Link
+            to="/pos"
+            className={`${styles.navLink} ${
+              location.pathname === "/pos" ? styles.navLinkActive : ""
+            }`}
+          >
+            <span className={styles.navIcon}>
+              <FaShoppingCart />
+            </span>
+            Hızlı Satış
           </Link>
         </div>
 
@@ -184,6 +204,22 @@ export default function Sidebar() {
         </div>
 
         <div className={styles.navItem}>
+          <Link
+            to="/customers"
+            className={`${styles.navLink} ${
+              isActive(location.pathname, "/customers")
+                ? styles.navLinkActive
+                : ""
+            }`}
+          >
+            <span className={styles.navIcon}>
+              <FaUsers />
+            </span>
+            Müştərilər
+          </Link>
+        </div>
+
+        <div className={styles.navItem}>
           <button
             type="button"
             className={`${styles.navLink} ${styles.navToggle}`}
@@ -211,6 +247,12 @@ export default function Sidebar() {
                 <FaCashRegister />
               </span>
               Kassalar
+            </Link>
+            <Link to="/banklar" className={subClass(location.pathname, "/banklar")}>
+              <span className={styles.navIcon}>
+                <FaUniversity />
+              </span>
+              Banklar
             </Link>
           </SubMenu>
         </div>

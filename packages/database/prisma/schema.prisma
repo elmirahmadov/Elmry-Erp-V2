@@ -31,9 +31,11 @@ model Company {
   branches         Branch[]
   warehouses       Warehouse[]
   tills            Till[]
+  banks            Bank[]
   categories       Category[]
   products         Product[]
   suppliers        Supplier[]
+  customers        Customer[]
   purchaseVouchers PurchaseVoucher[]
   users            User[]
   createdAt        DateTime          @default(now())
@@ -47,7 +49,9 @@ model Branch {
   company    Company           @relation(fields: [companyId], references: [id])
   warehouses BranchWarehouse[]
   tills      BranchTill[]
+  banks      BranchBank[]
   users      BranchUser[]
+  posUsers   User[]            @relation("UserPosBranch")
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 }
@@ -59,6 +63,7 @@ model Warehouse {
   company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   branches  BranchWarehouse[]
   stocks    WarehouseStock[]
+  posUsers  User[]            @relation("UserPosWarehouse")
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
@@ -79,18 +84,31 @@ model BranchWarehouse {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  email         String         @unique
-  name          String?
-  password      String
-  companyId     Int
-  company       Company        @relation(fields: [companyId], references: [id])
-  branches      BranchUser[]
-  roleId        Int // 1=admin, 2=user
-  permissions   Permission[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id              Int            @id @default(autoincrement())
+  email           String         @unique
+  name            String?
+  password        String
+  companyId       Int
+  company         Company        @relation(fields: [companyId], references: [id])
+  branches        BranchUser[]
+  roleId          Int // 1=admin, 2=user
+  permissions     Permission[]
+  posBranchId     Int?
+  posWarehouseId  Int?
+  posTillId       Int?
+  posBankId       Int?
+  posBranch       Branch?        @relation("UserPosBranch", fields: [posBranchId], references: [id], onDelete: SetNull)
+  posWarehouse    Warehouse?     @relation("UserPosWarehouse", fields: [posWarehouseId], references: [id], onDelete: SetNull)
+  posTill         Till?          @relation("UserPosTill", fields: [posTillId], references: [id], onDelete: SetNull)
+  posBank         Bank?          @relation("UserPosBank", fields: [posBankId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  refreshTokens   RefreshToken[]
+
+  @@index([posBranchId])
+  @@index([posWarehouseId])
+  @@index([posTillId])
+  @@index([posBankId])
 }
 
 model BranchUser {
@@ -197,6 +215,27 @@ model Supplier {
   @@index([companyId])
 }
 
+model Customer {
+  id            Int      @id @default(autoincrement())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  taxNumber     String?
+  status        String   @default("active")
+  totalSales    Float    @default(0)
+  totalReturn   Float    @default(0)
+  totalPayment  Float    @default(0)
+  debt          Float    @default(0)
+  companyId     Int
+  company       Company  @relation(fields: [companyId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId])
+}
+
 model PurchaseVoucher {
   id            Int                   @id @default(autoincrement())
   serialNo      String
@@ -245,6 +284,7 @@ model Till {
   status       String            @default("active")
   branches     BranchTill[]
   transactions TillTransaction[]
+  posUsers     User[]            @relation("UserPosTill")
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -264,11 +304,62 @@ model BranchTill {
   @@index([tillId])
 }
 
+model Bank {
+  id            Int               @id @default(autoincrement())
+  name          String
+  accountNumber String?
+  iban          String?
+  companyId     Int
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  balance       Float             @default(0)
+  status        String            @default("active")
+  branches      BranchBank[]
+  transactions  BankTransaction[]
+  posUsers      User[]            @relation("UserPosBank")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model BranchBank {
+  id        Int      @id @default(autoincrement())
+  branchId  Int
+  bankId    Int
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  bank      Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, bankId])
+  @@index([bankId])
+}
+
+model BankTransaction {
+  id               Int      @id @default(autoincrement())
+  bankId           Int
+  bank             Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  type             String // "medaxil" | "mexaric"
+  amount           Float
+  description      String?
+  counterpartyType String?
+  counterpartyId   Int?
+  counterpartyName String?
+  referenceNumber  String?
+  category         String?
+  paymentMethod    String?
+  currency         String   @default("AZN")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([bankId])
+}
+
 model TillTransaction {
   id               Int      @id @default(autoincrement())
   tillId           Int
   till             Till     @relation(fields: [tillId], references: [id], onDelete: Cascade)
-  type             String // "medaxil" | "mexaric" | "gider"
+  type             String // "medaxil" | "mexaric" | "gider" | "alis_iade" | "satis_iade"
   amount           Float
   description      String?
   counterpartyType String? // "supplier" | "customer"

@@ -1,5 +1,30 @@
 import { prisma } from "@elmry/database";
 
+const posSelect = {
+  id: true,
+  name: true,
+  email: true,
+  roleId: true,
+  companyId: true,
+  posBranchId: true,
+  posWarehouseId: true,
+  posTillId: true,
+  posBankId: true,
+  createdAt: true,
+  updatedAt: true,
+  posBranch: { select: { id: true, name: true } },
+  posWarehouse: { select: { id: true, name: true } },
+  posTill: { select: { id: true, name: true } },
+  posBank: { select: { id: true, name: true } },
+  branches: {
+    include: {
+      branch: {
+        select: { id: true, name: true },
+      },
+    },
+  },
+} as const;
+
 export class UserRepository {
   async create(data: {
     name: string;
@@ -7,6 +32,10 @@ export class UserRepository {
     password: string;
     companyId: number;
     roleId: number;
+    posBranchId?: number | null;
+    posWarehouseId?: number | null;
+    posTillId?: number | null;
+    posBankId?: number | null;
   }) {
     return await prisma.user.create({
       data: {
@@ -15,22 +44,19 @@ export class UserRepository {
         password: data.password,
         companyId: Number(data.companyId),
         roleId: Number(data.roleId),
+        posBranchId: data.posBranchId ?? null,
+        posWarehouseId: data.posWarehouseId ?? null,
+        posTillId: data.posTillId ?? null,
+        posBankId: data.posBankId ?? null,
       },
+      select: posSelect,
     });
   }
 
   async findById(id: number) {
     return await prisma.user.findUnique({
       where: { id },
-      include: {
-        branches: {
-          include: {
-            branch: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-      },
+      select: posSelect,
     });
   }
 
@@ -41,22 +67,7 @@ export class UserRepository {
   async findAllByCompany(companyId: number) {
     return await prisma.user.findMany({
       where: { companyId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roleId: true,
-        companyId: true,
-        createdAt: true,
-        updatedAt: true,
-        branches: {
-          include: {
-            branch: {
-              select: { id: true, name: true },
-            },
-          },
-        },
-      },
+      select: posSelect,
       orderBy: { id: "asc" },
     });
   }
@@ -76,11 +87,16 @@ export class UserRepository {
       password?: string;
       companyId?: number;
       roleId?: number;
+      posBranchId?: number | null;
+      posWarehouseId?: number | null;
+      posTillId?: number | null;
+      posBankId?: number | null;
     },
   ) {
     return await prisma.user.update({
       where: { id },
       data,
+      select: posSelect,
     });
   }
 

@@ -3,6 +3,7 @@ import {
   FaCashRegister,
   FaEdit,
   FaStore,
+  FaUniversity,
   FaWarehouse,
 } from "react-icons/fa";
 import CenterModal from "../../common/components/CenterModal";
@@ -16,10 +17,11 @@ import CompanyInfoDrawer from "./components/CompanyInfoDrawer";
 import CompanyBranchesDrawer from "./components/CompanyBranchesDrawer";
 import CompanyWarehousesDrawer from "./components/CompanyWarehousesDrawer";
 import CompanyTillsDrawer from "./components/CompanyTillsDrawer";
+import CompanyBanksDrawer from "./components/CompanyBanksDrawer";
 
 const ITEMS_PER_PAGE = 20;
 
-type DrawerKind = "info" | "branches" | "warehouses" | "tills" | null;
+type DrawerKind = "info" | "branches" | "warehouses" | "tills" | "banks" | null;
 
 const cellBase = "px-3 py-2 text-sm text-center whitespace-nowrap";
 const thBase =
@@ -281,6 +283,15 @@ export default function CompaniesPage() {
                         >
                           <FaCashRegister size={16} />
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => openDrawer("banks", c)}
+                          className={actionBtn}
+                          title="Bank"
+                          aria-label="Bank"
+                        >
+                          <FaUniversity size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -326,6 +337,12 @@ export default function CompaniesPage() {
       />
       <CompanyTillsDrawer
         isOpen={drawer === "tills"}
+        companyId={activeCompany?.id ?? null}
+        companyName={activeCompany?.name}
+        onClose={closeDrawer}
+      />
+      <CompanyBanksDrawer
+        isOpen={drawer === "banks"}
         companyId={activeCompany?.id ?? null}
         companyName={activeCompany?.name}
         onClose={closeDrawer}

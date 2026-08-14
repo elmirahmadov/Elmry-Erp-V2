@@ -77,7 +77,13 @@ export class AuthRepository {
 
       return prisma.user.findUnique({
         where: { id: userId },
-        include: { company: true },
+        include: {
+          company: true,
+          posBranch: { select: { id: true, name: true } },
+          posWarehouse: { select: { id: true, name: true } },
+          posTill: { select: { id: true, name: true } },
+          posBank: { select: { id: true, name: true } },
+        },
       });
     } catch (error) {
       console.error("User findById hatasi:", error);
@@ -88,7 +94,13 @@ export class AuthRepository {
   async findUserByEmail(email: string) {
     return prisma.user.findUnique({
       where: { email },
-      include: { company: true },
+      include: {
+        company: true,
+        posBranch: { select: { id: true, name: true } },
+        posWarehouse: { select: { id: true, name: true } },
+        posTill: { select: { id: true, name: true } },
+        posBank: { select: { id: true, name: true } },
+      },
     });
   }
 

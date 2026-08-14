@@ -63,9 +63,14 @@ export function mapProductBranchStocks<
     }
   }
 
-  const { warehouseStocks: _warehouseStocks, ...rest } = product;
+  const { warehouseStocks, ...rest } = product;
   return {
     ...rest,
+    warehouseStocks: (warehouseStocks ?? []).map((stock) => ({
+      warehouseId: stock.warehouse.id,
+      warehouseName: stock.warehouse.name,
+      quantity: stock.quantity,
+    })),
     branchStocks: Array.from(totals.values()),
   };
 }
@@ -222,29 +227,44 @@ export class ProductRepository {
 
   async searchByCompany(
     companyId: number,
-    filters: { id?: number; name?: string; barcode?: string },
+    filters: { id?: number; name?: string; barcode?: string; q?: string },
   ) {
+    const q = filters.q?.trim();
+    const numericId = q && /^\d+$/.test(q) ? Number(q) : undefined;
+
     return await prisma.product.findMany({
       where: {
         companyId,
+        isActive: true,
         ...(filters.id !== undefined ? { id: filters.id } : {}),
-        ...(filters.name
+        ...(q
           ? {
-              name: {
-                contains: filters.name,
-              },
+              OR: [
+                { name: { contains: q } },
+                { barcode: { contains: q } },
+                ...(numericId !== undefined ? [{ id: numericId }] : []),
+              ],
             }
-          : {}),
-        ...(filters.barcode
-          ? {
-              barcode: {
-                contains: filters.barcode,
-              },
-            }
-          : {}),
+          : {
+              ...(filters.name
+                ? {
+                    name: {
+                      contains: filters.name,
+                    },
+                  }
+                : {}),
+              ...(filters.barcode
+                ? {
+                    barcode: {
+                      contains: filters.barcode,
+                    },
+                  }
+                : {}),
+            }),
       },
       include: productListInclude,
       orderBy: { id: "desc" },
+      take: 30,
     });
   }
 
